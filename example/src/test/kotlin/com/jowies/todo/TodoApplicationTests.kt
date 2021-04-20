@@ -1,4 +1,4 @@
-package com.jowies.todo
+package com.jowies.example.todo
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest

@@ -1,4 +1,4 @@
-package com.jowies.todo
+package com.jowies.example.todo
 
 import org.springframework.stereotype.Service
 

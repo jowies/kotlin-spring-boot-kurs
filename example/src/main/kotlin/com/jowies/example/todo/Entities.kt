@@ -1,4 +1,4 @@
-package com.jowies.todo
+package com.jowies.example.todo
 
 import java.time.LocalDateTime
 import javax.persistence.*

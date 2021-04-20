@@ -1,4 +1,4 @@
-package com.jowies.todo
+package com.jowies.example.todo
 
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.SpringBootApplication
@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Bean
 class TodoApplication {
 
   @Bean
-  fun run(todoListRepository: TodoListRepository, todoItemRepository: TodoItemRepository) =
+  fun run(todoListRepository: TodoListRepository) =
       ApplicationRunner {
         todoListRepository.save(TodoList(name = "Hverdag", description = "Gjoremal i hverdagen"))
       }
