@@ -18,15 +18,13 @@ class TodoController(val todoService: TodoListService) {
 
   @GetMapping
   fun getAllLists(): List<TodoList> {
-    print("1")
     return todoService.getAllLists()
   }
 
   @GetMapping("/{id}")
   fun getListById(@PathVariable id: Long): TodoList {
-    print("1")
     return todoService.getList(id)
-        ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "This todo list does not exist")
+      ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "This todo list does not exist")
   }
 
   @PostMapping
@@ -42,5 +40,6 @@ class TodoController(val todoService: TodoListService) {
   @PutMapping("/{id}")
   fun deletePost(@PathVariable id: Long, @RequestBody todoList: TodoList): TodoList {
     return todoService.updateList(id, todoList)
+      ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "This todo list does not exist")
   }
 }

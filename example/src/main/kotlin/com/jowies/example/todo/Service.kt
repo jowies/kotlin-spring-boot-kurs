@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service
 @Service
 class TodoListService(
     var todoListRepository: TodoListRepository,
-    var todoItemRepository: TodoItemRepository
 ) {
 
   fun getAllLists(): List<TodoList> {
@@ -24,15 +23,10 @@ class TodoListService(
     return todoListRepository.deleteById(id)
   }
 
-  fun updateList(id: Long, newTodoList: TodoList): TodoList {
+  fun updateList(id: Long, updatedList: TodoList): TodoList? {
     return todoListRepository.findById(id).orElse(null)?.let {
-      it.name = newTodoList.name
-      it.description = newTodoList.description
+      it.name = updatedList.name
+      it.description = updatedList.description
       return todoListRepository.save(it)
     }
-        ?: let {
-          newTodoList.id = id
-          return todoListRepository.save(newTodoList)
-        }
-  }
 }
