@@ -51,6 +51,8 @@ På unix, skriv:
 
 Forhåpentligvis kræsjer det ikke...Du kan gå til `localhost:8080`. Står det /error er du good
 
+Jeg ville ha denne oppe hvis dere ikke er så kjent med Kotlin. Her står det meste: <https://kotlinlang.org/docs/getting-started.html>
+
 ## Første endepunkt
 
 Åpne prosjektet i favoritteditoren din. Naviger til `src/main/.../TodoApplication.kt`
@@ -99,7 +101,7 @@ import java.time.LocalDateTime
 import javax.persistence.*
 
 @Entity
-class TodoList(
+data class TodoList(
         var name: String,
         var description: String,
         var created: LocalDateTime = LocalDateTime.now(),
@@ -136,7 +138,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class TodoListService(
-    var todoListRepository: TodoListRepository
+    val todoListRepository: TodoListRepository
 ) {
 
   fun getAllLists(): List<TodoList> {
@@ -173,9 +175,9 @@ class TodoApplication {
 }
 ```
 
-Her lager vi en @Bean. Spring ser denne og kjører den. `TodoListRepositoriet` blir injected. Og vi bruker metoden `save` for å lagre et *TodoList*-objekt
+Her bruker vi `ApplicationRunner`. Den er annotert med en `@Bean` og blir brukt i `@SpringBootApplication`. Da vil spring registrere og kjøre den. `TodoListRepositoriet` blir injected. Og vi bruker metoden `save` for å lagre et *TodoList*-objekt
 
-Faen ja! Endelig kan vi gjore et ordentlig request. Gå inn i Postman lastned og importer TodoKurs.postman.json. Og trykk send på *GetAll*-requestet!
+Faen ja! Endelig kan vi gjore et ordentlig request. Gå inn i Postman last ned og importer TodoKurs.postman.json. Og trykk send på *GetAll*-requestet!
 
 Yeeey! Dataen blir initialisert og vi henter den med et GET-request!
 
@@ -185,7 +187,7 @@ Nå har vi lagd byggeklossene for kjapt kunne legge til ny funksjonalitet. Nå f
 
 ### Oppgave 1 - Legge til data
 
-I denne oppgave skal dere lage et POST-request for å lagre dataen. Dere trenger kun å endre ting i følgende filer:
+I denne oppgaven skal dere lage et POST-request for å lagre dataen. Dere trenger kun å endre ting i følgende filer:
 
 * `Controller.kt`: Her vil dere trenge `@PostMapping` og `@RequestBody`
 * `Service.kt`: Her trenger dere kun `todoListRepository.save`
@@ -197,7 +199,7 @@ Tips 2: Tenk over hva en funksjon skal få inn og hva den skal returnere
 
 ### Oppgave 2 - Hente én ting
 
-I denne oppgave skal dere lage et GET-request for å hente én todolist. Dere trenger kun å endre ting i følgende filer:
+I denne oppgaven skal dere lage et GET-request for å hente én todolist. Dere trenger kun å endre ting i følgende filer:
 
 * `Controller.kt`: Her vil dere trenge `@GetMapping{/{id})` og `@PathVariable`
 * `Service.kt`: Her trenger dere `todoListRepository.getById`
@@ -206,12 +208,12 @@ Bruk Postman for å sjekke om det funker
 
 Tips 1: `@PathVariable` brukes likt som `@RequestBody`, men gir deg parametere i URL'en.
 Tips 2:`orElse(null)` kan brukes etter `getById` for å gjøre en Java Optional<> til en Kotlin nullable.
-Tips 3: `?:` kalles en elvis operator. Hvis noe er null, eller falsy vil det til høyre skje.
+Tips 3: `?:` kalles en elvis operator. Hvis noe er null vil det til høyre returneres. Ellers vil det til venstre
 Tips 4: Det er greit å throwe noen type exceptions i spring. `ResponseStatusException` kan anbefales der
 
 ### Oppgave 3 - Slette
 
-I denne oppgave skal dere lage et DELETE-request for å lagre dataen. Dere trenger kun å endre ting i følgende filer:
+I denne oppgaven skal dere lage et DELETE-request for å slette dataen. Dere trenger kun å endre ting i følgende filer:
 
 * `Controller.kt`: Her vil dere trenge `@DeletMapping{/{id})` og `@PathVariable`som i forrige eksempel
 * `Service.kt`: Her trenger dere `todoListRepository.deleteById`
@@ -220,7 +222,7 @@ Bruk Postman for å sjekke om det funker
 
 ### Oppgave 4 - Oppdatere
 
-Har dere kommet dere så langt burde neste være plankekjøring. Neida. Prøv å lag et PUT-request. Tips se her: <https://kotlinlang.org/docs/scope-functions.html#let>
+Har dere kommet dere så langt burde neste være plankekjøring. Neida. Prøv å lag et PUT-request for å endre navnet til en allerede eksisterende TodoList.
 
 ### Ferdig
 

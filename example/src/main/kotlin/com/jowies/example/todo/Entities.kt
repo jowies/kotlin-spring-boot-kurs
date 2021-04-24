@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 import javax.persistence.*
 
 @Entity
-class TodoList(
+data class TodoList(
         var name: String,
         var description: String,
         var created: LocalDateTime = LocalDateTime.now(),

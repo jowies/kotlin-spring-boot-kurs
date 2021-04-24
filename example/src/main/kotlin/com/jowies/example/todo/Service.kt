@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class TodoListService(
-    var todoListRepository: TodoListRepository,
+    val todoListRepository: TodoListRepository,
 ) {
 
   fun getAllLists(): List<TodoList> {
@@ -29,4 +29,5 @@ class TodoListService(
       it.description = updatedList.description
       return todoListRepository.save(it)
     }
+  }
 }
