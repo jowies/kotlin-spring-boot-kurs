@@ -79,7 +79,7 @@ Nå skal vi lage et enkelt GET-endepunkt. Lag en ny mappe ved siden av `src/main
 ```kotlin
 @RestController
 @RequestMapping("v1")
-class PokemonController(private val pokemonService: PokemonService) {
+class PokemonController() {
     @GetMapping("pokemon/{name}")
     suspend fun getSinglePokemon(@PathVariable name: String) = name
 }
