@@ -14,14 +14,12 @@ Velg følgende konfigurasjon:
 
 1. Project: **Maven**
 2. Language: **Kotlin**
-3. Spring Boot: **2.4.5**
+3. Spring Boot: **2.7.1**
 4. Project metadata: **Vær kreativ**
 5. Packaging: **Jar**
-6. Java: **11**
+6. Java: **17**
 7. Dependencies:
-**Spring Web**,
-**Spring Data Jpa**,
-**H2 Database**,
+**Spring Reactive Web**,
 **Spring Boot DevTools**,
 
 Last ned og extract mappen
@@ -40,7 +38,7 @@ pom.xml
 
 1. **src** - Her ligger all koden var
 2. **HELP.MD** - Liste over dokumentasjon og noen guider
-3. **mvnw** - Kan brukes til a kjore maven pa unix-systemer. Ikke nodvendig hvis man har det installert pa pcen, men kan vare greit med tanke pa versjon
+3. **mvnw** - Kan brukes til a kjore maven pa unix-systemer. Ikke nodvendig hvis man har det installert på pcen, men kan vare greit med tanke på versjon
 4. **mvnw.cmd** - Samme som over men for windows
 5. **pom.xml** - Brukes til a konfigurere applikasjonen, definere dependencies etc.
 
@@ -53,177 +51,295 @@ Forhåpentligvis kræsjer det ikke...Du kan gå til `localhost:8080`. Står det 
 
 Jeg ville ha denne oppe hvis dere ikke er så kjent med Kotlin. Her står det meste: <https://kotlinlang.org/docs/getting-started.html>
 
+Noen flere dependencier trengs for å jobbe med coroutines i kotlin. Legg til følgende i pom.xml:
+
+```
+<dependency>
+  <groupId>org.jetbrains.kotlinx</groupId>
+  <artifactId>kotlinx-coroutines-core</artifactId>
+  <version>1.6.2</version>
+</dependency>
+<dependency>
+  <groupId>org.jetbrains.kotlinx</groupId>
+  <artifactId>kotlinx-coroutines-core-jvm</artifactId>
+  <version>1.6.2</version>
+</dependency>
+```
+
 ## Første endepunkt
 
-Åpne prosjektet i favoritteditoren din. Naviger til `src/main/.../TodoApplication.kt`
+Åpne prosjektet i favoritteditoren din. Naviger til `src/main/.../SpringKursApplication.kt`
 Dette er startpunktet for applikasjonen deres. Dette burde ikke se så fremmed ut hvis du er kjent med kotlin. Det er en ganske enkel klasse, med en main funksjon. Det som er interessant er egentlig ```@SpringBootApplication``` som indikerer hvor Spring skal starte applikasjonen.
 
-Nå skal vi lage et enkelt GET-endepunkt. Lag en ny fil som heter `Controller.kt`. I den skriver dere følgende:
+Nå skal vi lage et enkelt GET-endepunkt. Lag en ny mappe ved siden av `src/main/.../SpringKursApplication.kt` som dere kaller `controller`  Lag en ny fil som heter `PokemonController.kt`. I den skriver dere følgende:
 
 ```kotlin
-package com.jowies.example.todo
-
-import org.springframework.web.bind.annotation.RestController
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.GetMapping
-
 @RestController
-@RequestMapping("/list")
-class TodoController() {
-
-  @GetMapping
-  fun getAllLists(): String {
-    return "Hello world"
-  }
+@RequestMapping("v1")
+class PokemonController(private val pokemonService: PokemonService) {
+    @GetMapping("pokemon/{name}")
+    suspend fun getSinglePokemon(@PathVariable name: String) = name
 }
 ```
 
-Gå inn på <http://localhost:8080>. Og du burde se `Hello World`.
+Kjør applikasjonen igjen og gå inn på <http://localhost:8080/v1/pokemon/pikachu>. Og du burde se `Pikachu`.
 
 **Så hva skjer her?**
 
-* `@RestController`: Denne definerer at klassen skal lastes inn av Spring til å fungere som controller der metodene alltid returner et object. Her får vi mye gratis. Blant annet blir det automatisk parset til og fra JSON.
+* `@RestController`: Denne definerer at klassen skal lastes inn av Spring til å fungere som controller. Egentlig en shorthand for `@Controller` og `@ResponseBody`, Her får vi mye gratis. Blant annet blir det automatisk parset til og fra JSON.
 
-* `@RequestMapping`: Definerer hvor i URL-pathen og hva slags request som skal gjelde. I dette tilfelle vil requests mot /list gå mot denne controlleren.
+* `@RequestMapping`: Definerer hvor i URL-pathen og hva slags request som skal gjelde. I dette tilfelle vil requests mot `/v1` gå mot denne controlleren.
 
-* `@GetMapping`: Shorthand for `@RequestMapping(method=GET)`
+* `@GetMapping`: Shorthand for `@RequestMapping(method=GET)`, definerer hvilken HTTP-metode som skal matches
 
-### Få på litt faktisk data
+### La oss strukturere appen
 
-Hello world er kult. Men det hadde vært kulere hvis vi faktisk fikk noe data. Enig! La oss begynne med å definere hvordan dataen vår skal se ut.
+Legg til følgende mapper:
 
-Lag filen `Entities.kt`. Skriv følgende:
+```
+- client
+- config
+- dto
+- properties
+- service
+```
+
+Ett av prinsippene Spring Boot er bygd etter er "Seperation of concerns". Vi splitter opp applikasjonen vår i seperate ansvarsområder. De forskjellige mappene definerer disse områdene:
+
+* `client`: Klasser for å snakke med andre api'er, heter naturlig client fra client/server, der spring boot applicasjonen i dette tilfelle er clienten
+* `config`: Klasser for å konfigurasjon
+* `dto`: Står for "Data Transfer Objects". Det kan være lurt å definere egne modeller for dataen man skal sende tilbake fra requests. Det er riktignok en diskusjon om dette er "gammeldags", og fører til mye boilerplate
+* `properties`: Brukes for å hente properties fra f.eks. environmentet eller application.yaml
+* `service`: Service er der businesslogikken ligger, her henter man data, endrer på den osv.
+
+### Properties
+Siden vi skal hente data fra et eksternt api kan det være fint å definere properties et sted, vi har en egen properties mappe her. Det er ikk ealltid nødvendig, man kan gjerne putte propertiene direkte i filen der de skal brukes eller en hjelpeklasse ved siden av.
+
+Lag følgende klasse i en ny fil `PokemonClientProperties.kt` i properties-mappen:
+
 
 ```kotlin
-package com.jowies.example.todo
+@ConfigurationProperties(prefix = "pokemon.client")
+@Component
+class PokemonClientProperties {
+    lateinit var url: String
+}
+```
+**Så hva skjer her?**
 
-import java.time.LocalDateTime
-import javax.persistence.*
+* `@ConfigurationProperties`: Brukes for å hente properties fra application.properties eller application.yml i formen av en klasse
 
-@Entity
-data class TodoList(
-        var name: String,
-        var description: String,
-        var created: LocalDateTime = LocalDateTime.now(),
-        @Id @GeneratedValue var id: Long? = null
+* `@Component`: Defineres så spring plukker den opp og injecter propertiene
+
+### Client
+Neste vi skal se på er clienten. Dette blir en klasse som abstraherer bort api-kallene mot `pokeapi.co`
+
+I client trenger vi domeneobjektene som pokeapi brukes. Vi lager noen simplifiserte data-klasser for dette
+
+Lag filene: 
+`...client/domain/PokemonResponse.kt`
+`...client/domain/EggGroupResponse.kt`
+
+I de respektive file legg til følgende dataklasse
+
+```kotlin
+data class Ability(
+    val name: String
+)
+
+data class AbilityInfo(
+    val ability: Ability
+)
+
+data class PokemonResponse(
+    val id: String,
+    val name: String,
+    @JsonProperty("base_experience")
+    val baseExperience: Int,
+    val height: Int,
+    val is_default: Boolean,
+    val weight: Int,
+    val abilities: List<AbilityInfo>
 )
 ```
 
-* `@Entity`: Indikerer at dette er en JPA-entity. JPA står for Java Persistence API. Definert av java for persistent lagring.
-
-* `@Id`: Gjør at JPA gjenkjenner dette feltet som ID'en til objektet
-
-* `@GeneratedValue`: Indikerer at ID'en skal genereres automatisk
-
-Vi trenger å lagre dataen et sted. Vi sette ikke opp en database, men bruker H2 til å få en in-memory database.
-
-Lag filen `Repositories.kt`. Skriv følgende:
-
 ```kotlin
-package com.jowies.example.todo
+data class PokemonSpecies(
+    val name: String,
+    val url: String
+)
 
-import org.springframework.data.repository.CrudRepository
 
-interface TodoListRepository : CrudRepository<TodoList, Long> {}
+data class EggGroupResponse(
+    val id: Int,
+    val name: String,
+    @JsonProperty("pokemon_species")
+    val pokemonSpecies: List<PokemonSpecies>
+)
 ```
 
-* `CrudRepository`: Vi lager en extension av CrudRepository. Spring-magi lager en implementasjon av dette interfacet når appen starter.
+Med data-klassene på plass kan vi lage clienten
 
-Vi trenger også et sted for å kjøre applikasjon/business-logikken vår. `Entities.kt` definerer datamodellene våre, `Repositories.kt` definerer hvor vi lagrer dataen vår. Lag filen `Service.kt`:
+Lag følgende klasse i en ny fil `..client/PokemonClient.kt` i client-mappen:
+
 
 ```kotlin
-package com.jowies.example.todo
-
-import org.springframework.stereotype.Service
-
-@Service
-class TodoListService(
-    val todoListRepository: TodoListRepository
+class PokemonClient(
+    private val webClient: WebClient
 ) {
+    suspend fun getSinglePokemon(name: String) =
+        webClient
+            .get()
+            .uri("/pokemon/$name")
+            .retrieve()
+            .awaitBody<PokemonResponse>()
 
-  fun getAllLists(): List<TodoList> {
-    return todoListRepository.findAll().toList()
-  }
+    suspend fun getEggGroup(name: String) =
+        webClient
+            .get()
+            .uri("/egg-group/$name")
+            .retrieve()
+            .awaitBody<EggGroupResponse>()
+}
+```
+**Så hva skjer her?**
+
+* `suspend`: Lar oss bruke kotling coroutines. Dette er asynkrone funksjoner, som kan suspendes, altså vente på å kjøre videre. Tenk async/await fra javascript
+
+* `awaitBody`: Sier at vi skal vente på responsen og definerer forventet responsebody
+
+### Config
+Som du kan se tar `PokemonClient` inn en webClient, den vil vi gjerne definere hvordan skal se ut. Det gjør vi i en config:
+
+```kotling
+@Configuration
+class PokemonClientConfig(
+    private val pokemonClientProperties: PokemonClientProperties
+) {
+    @Bean
+    fun pokemonClient(): PokemonClient {
+        // Dette er en hack siden pokeapi sender så insane mye data per pokemon
+        val size = 16 * 1024 * 1024
+        val strategies = ExchangeStrategies.builder()
+            .codecs { codecs: ClientCodecConfigurer ->
+                codecs.defaultCodecs().maxInMemorySize(size)
+            }
+            .build()
+        
+        val webClient = WebClient
+            .builder()
+            .exchangeStrategies(strategies)
+            .baseUrl(pokemonClientProperties.url)
+            .build()
+        return PokemonClient(
+            webClient
+        )
+    }
 }
 ```
 
-* `@Service`: Markerer en klasse som at den har ansvar for business-logikk. Spring ser denne og kan injecte den andre steder i appen. Som neste kodesnutt viser.
+**Så hva skjer her?**
 
-Boom! Da har vi det vi trenger. La oss gå tilbake til `Controller.kt`. Her vil vi nå legge til servicen vår. Spring bruker constructor injection til å legge til servicen.
+* `@Configuration`: Indikerer at klassen deklarerer en eller flere "beans" og kan prosesseres av Spring IoC container for å genere "bean"-definisjoner
+
+* `@Bean`: En bønne er et object som er opprettet, bygget, og håndtert av Spring IoC Containeren. Den ligger alltid på metodenivå til forskjell fra f.eks. `@Component`
+
+* Hvis vi ser på hva som skjer her har vi en metode som returnerer en PokemonClient, vi tar også og oppretter en webclient som vi sender inn som parameter i instansieringingen. Denne instansen av pokemonClient vil nå bli brukt alle steder der vi definerer at vi vil ha en PokemonClient, gitt at den har `@Compenent` eller tilsvarende. 
+
+
+
+
+### DTO
+
+Vi lager en fil for å definere DTO'en vår, det er bare en og det er pokemon `../dto/PokemonDTO.kt`
+
+```
+data class PokemonDTO(
+    val id: String,
+    val name: String,
+    val baseExperience: Int,
+    val height: Int,
+    val weight: Int,
+    val numberOfAbilities: Int
+)
+```
+
+Vi lager også en mapper for å mappe fra domene-objektene fra `pokeapi` til vår DTO
+
+`..dto/mapper/PokemonDTOMapper.kt`
 
 ```kotlin
-...
-class TodoController(val todoService: TodoListService) {
-
-  @GetMapping
-  fun getAllLists(): List<TodoList> {
-    return todoService.getAllLists()
-  }
+fun toPokemonDTO(pokemonResponse: PokemonResponse): PokemonDTO {
+    return PokemonDTO(
+        id = pokemonResponse.id,
+        name = pokemonResponse.name,
+        baseExperience = pokemonResponse.baseExperience,
+        height = pokemonResponse.height,
+        weight = pokemonResponse.weight,
+        numberOfAbilities = pokemonResponse.abilities.count()
+    )
 }
 ```
 
-Nice! Da må vi vel være der? Ish. Vi har jo ikke noe data å hente. Det trenger vi. La oss legge til noe data når appen starter. I `TodoApplication.kt` legg til følgende:
+Her har vi noe annet som er ganske kult med kotling, og det er at vi kan definere funksjonere på "top-level", ingen grunn til å definere en kall for en enkel input/output funksjon
+
+
+### Service
+Med DTO på plass gjenstår bare å knytte alt sammen. Det gjør vi med å lage en service-klasse.
+
+`../service/PokemonService.kt`
 
 ```kotlin
-class TodoApplication {
+@Service
+class PokemonService(private val pokemonClient: PokemonClient) {
+    suspend fun getSinglePokemon(name: String) =
+        toPokemonDTO(pokemonClient.getSinglePokemon(name))
 
-  @Bean
-  fun run(todoListRepository: TodoListRepository) =
-      ApplicationRunner {
-        todoListRepository.save(TodoList(name = "Hverdag", description = "Gjoremal i hverdagen"))
-      }
+    suspend fun getAllPokemonInEggGroup(eggGroupName: String) = coroutineScope {
+        val eggGroup = pokemonClient.getEggGroup(eggGroupName)
+
+        eggGroup.pokemonSpecies.map {
+            async {
+                pokemonClient.getSinglePokemon(it.name);
+            }
+        }.awaitAll().map { toPokemonDTO(it) }
+    }
 }
 ```
 
-Her bruker vi `ApplicationRunner`. Den er annotert med en `@Bean` og blir brukt i `@SpringBootApplication`. Da vil spring registrere og kjøre den. `TodoListRepositoriet` blir injected. Og vi bruker metoden `save` for å lagre et *TodoList*-objekt
+**Så hva skjer her?**
 
-Faen ja! Endelig kan vi gjore et ordentlig request. Gå inn i Postman last ned og importer TodoKurs.postman.json. Og trykk send på *GetAll*-requestet!
+* `@Service`: Egentlig det samme som @Component, vi bruker det bare for å definere service-laget
 
-Yeeey! Dataen blir initialisert og vi henter den med et GET-request!
+* `coroutineScope`: Brukes lager en et CoroutineScope. Brukes når man skal gjøre paralelle asynkrone kall. Les mer her: https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/coroutine-scope.html
 
-## Av med støttehjulene
+* `async`: Sier at dette er en asynkront kall og returnerer et type Future (Promise hvis du kommer fra js-verden)
 
-Nå har vi lagd byggeklossene for kjapt kunne legge til ny funksjonalitet. Nå fjerner vi støttehjulene og dere får noen oppgaver. Hver oppgave gir dere det dere trenger for å løse den. Hvis dere står fast kan dere bruke eksempelet i *example*-mappen over som veiledning. Bruk Goodle for alt det er verdt, men ikke bare copy-paste, prøv å forstå koden.
+* `awaitAll`: Gjør akkurat det man tenker at det skal gjøre: venter på at alle futurene er fullført før resultatet blir returnert
 
-### Oppgave 1 - Legge til data
 
-I denne oppgaven skal dere lage et POST-request for å lagre dataen. Dere trenger kun å endre ting i følgende filer:
+### Tilbake til controlleren
 
-* `Controller.kt`: Her vil dere trenge `@PostMapping` og `@RequestBody`
-* `Service.kt`: Her trenger dere kun `todoListRepository.save`
+Da er vi straks i mål. Det siste vi mangler er å knytte services til controlleren vår:
 
-Bruk postman-requestet som heter Create for å teste endepunktet. Bruk getAll for å sjekke om du fikk lagret todolisten.
+```kotlin
+@RestController
+@RequestMapping("v1")
+class PokemonController(private val pokemonService: PokemonService) {
+    @GetMapping("pokemon/{name}")
+    suspend fun getSinglePokemon(@PathVariable name: String) =
+        pokemonService.getSinglePokemon(name)
 
-Tips 1: Man bruker `@RequestBody` foran en parameter i en funksjon
-Tips 2: Tenk over hva en funksjon skal få inn og hva den skal returnere
+    @GetMapping("egg-group/{name}")
+    suspend fun getAllPokemonInEggGroup(@PathVariable name: String) =
+        pokemonService.getAllPokemonInEggGroup(name)
+}
+```
 
-### Oppgave 2 - Hente én ting
+Og der er vil i mål!
 
-I denne oppgaven skal dere lage et GET-request for å hente én todolist. Dere trenger kun å endre ting i følgende filer:
+Test det ut med å gjøre et get kall til følgende endepunkt:
 
-* `Controller.kt`: Her vil dere trenge `@GetMapping{/{id})` og `@PathVariable`
-* `Service.kt`: Her trenger dere `todoListRepository.getById`
-
-Bruk Postman for å sjekke om det funker
-
-Tips 1: `@PathVariable` brukes likt som `@RequestBody`, men gir deg parametere i URL'en.
-Tips 2:`orElse(null)` kan brukes etter `getById` for å gjøre en Java Optional<> til en Kotlin nullable.
-Tips 3: `?:` kalles en elvis operator. Hvis noe er null vil det til høyre returneres. Ellers vil det til venstre
-Tips 4: Det er greit å throwe noen type exceptions i spring. `ResponseStatusException` kan anbefales der
-
-### Oppgave 3 - Slette
-
-I denne oppgaven skal dere lage et DELETE-request for å slette dataen. Dere trenger kun å endre ting i følgende filer:
-
-* `Controller.kt`: Her vil dere trenge `@DeletMapping{/{id})` og `@PathVariable`som i forrige eksempel
-* `Service.kt`: Her trenger dere `todoListRepository.deleteById`
-
-Bruk Postman for å sjekke om det funker
-
-### Oppgave 4 - Oppdatere
-
-Har dere kommet dere så langt burde neste være plankekjøring. Neida. Prøv å lag et PUT-request for å endre navnet til en allerede eksisterende TodoList.
-
-### Ferdig
-
-De vanlig REST-requestene er dekket. Neste steg vil være å lage en items entity. Så man faktisk kan legge til ting i todolistene.
+`http://localhost:8080/v1/pokemon/mewtwo`
+og 
+`http://localhost:8080/v1/egg-group/monster`

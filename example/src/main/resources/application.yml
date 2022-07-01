@@ -1,0 +1,3 @@
+pokemon:
+  client:
+    url: https://pokeapi.co/api/v2
