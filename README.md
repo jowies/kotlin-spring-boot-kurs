@@ -1,5 +1,8 @@
 # Spring Boot med Kotlin
 
+Vi skal lage et enkelt api med Spring Boot der vi bruker reactive webclient og kotlin coroutines. Vi skal bruke https://pokeapi.co/ for å hente data.
+
+
 ## Ting dere trenger på forhånd
 
 * Java 11 eller nyere
@@ -130,6 +133,8 @@ class PokemonClientProperties {
 * `@ConfigurationProperties`: Brukes for å hente properties fra application.properties eller application.yml i formen av en klasse
 
 * `@Component`: Defineres så spring plukker den opp og injecter propertiene
+
+I application.properties kan du putte følgende pokemon.client.url=https://pokeapi.co/api/v2
 
 ### Client
 Neste vi skal se på er clienten. Dette blir en klasse som abstraherer bort api-kallene mot `pokeapi.co`

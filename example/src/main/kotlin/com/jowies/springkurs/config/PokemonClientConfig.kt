@@ -17,6 +17,9 @@ import org.springframework.http.codec.ClientCodecConfigurer
 import org.springframework.web.reactive.function.client.ExchangeStrategies
 import org.springframework.web.reactive.function.client.WebClient
 
+
+private val logger = mu.KotlinLogging.logger {}
+
 @Configuration
 class PokemonClientConfig(
     private val pokemonClientProperties: PokemonClientProperties

@@ -3,7 +3,7 @@ package com.jowies.springkurs.dto.mapper
 import com.jowies.springkurs.client.domain.PokemonResponse
 import com.jowies.springkurs.dto.PokemonDTO
 
-fun toPokemonDTO(pokemonResponse: PokemonResponse): PokemonDTO {
+fun toPokemonDTOMapper(pokemonResponse: PokemonResponse): PokemonDTO {
     return PokemonDTO(
         id = pokemonResponse.id,
         name = pokemonResponse.name,
